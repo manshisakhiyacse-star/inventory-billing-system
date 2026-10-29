@@ -159,4 +159,4 @@ For in-depth guides, see the `docs/` folder:
 
 ## License
 
-Proprietary & Confidential. All rights reserved.
+Proprietary & Confidential. All rights reserved. with ♥ by Manshi Patel
