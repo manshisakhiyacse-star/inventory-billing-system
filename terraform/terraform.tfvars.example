@@ -1,0 +1,14 @@
+# ==============================================================================
+# Terraform Variables Example (terraform.tfvars)
+# Copy this file to 'terraform.tfvars' when ready to deploy to AWS.
+# ==============================================================================
+
+aws_region        = "us-east-1"
+project_name      = "inventory-billing"
+environment       = "production"
+
+# Sizing & Database
+db_instance_class = "db.t4g.micro"   # AWS Free Tier eligible
+db_name           = "inventory_billing"
+db_username       = "inv_app"
+ec2_instance_type = "t4g.small"       # ARM64 Graviton processor for high efficiency

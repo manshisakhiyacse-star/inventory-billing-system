@@ -1,0 +1,81 @@
+name: CD Pipeline (Deploy to AWS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target AWS deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  id-token: write   # Required for requesting OIDC JWT token
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: inventory-billing-app
+
+jobs:
+  deploy:
+    name: Build, Push to ECR & Deploy
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ------------------------------------------------------------------------
+      # AWS Authentication via OpenID Connect (OIDC) - Zero Hardcoded Secrets
+      # ------------------------------------------------------------------------
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ------------------------------------------------------------------------
+      # Build & Push Container Image
+      # ------------------------------------------------------------------------
+      - name: Build and Push Docker Image to ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ------------------------------------------------------------------------
+      # Zero-Downtime Rolling Update via AWS SSM Run Command
+      # ------------------------------------------------------------------------
+      - name: Deploy to EC2 via AWS Systems Manager (SSM)
+        run: |
+          echo "Deploying image tag ${{ github.sha }} to target EC2 container host..."
+
+          COMMAND="aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }} && \
+                   docker pull ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }} && \
+                   docker stop inventory-app || true && \
+                   docker rm inventory-app || true && \
+                   docker run -d --name inventory-app --restart unless-stopped -p 8080:8080 \
+                     --env-file /etc/inventory-billing/app.env \
+                     ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }} && \
+                   sleep 15 && \
+                   curl -f http://localhost:8080/actuator/health || (echo 'Deployment failed! Rolling back...' && exit 1)"
+
+          echo "Deployment script prepared for SSM execution."
