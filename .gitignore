@@ -1,0 +1,62 @@
+# ========================
+# Build output
+# ========================
+target/
+*.jar
+*.war
+*.class
+
+# ========================
+# Maven
+# ========================
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+# ========================
+# IDE files
+# ========================
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.factorypath
+.vscode/
+*.swp
+*.swo
+*~
+
+# ========================
+# macOS
+# ========================
+.DS_Store
+._*
+
+# ========================
+# Environment & Secrets
+# ========================
+.env
+*.env.local
+*.pem
+*.key
+*.p12
+*.jks
+
+# ========================
+# Docker (local volumes)
+# ========================
+docker-data/
+
+# ========================
+# Logs
+# ========================
+logs/
+*.log
+
+# ========================
+# Test output
+# ========================
+test-output/
+surefire-reports/
