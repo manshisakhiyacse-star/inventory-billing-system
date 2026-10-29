@@ -81,6 +81,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+        String detail = String.format("Parameter '%s' with value '%s' could not be converted to %s.",
+                ex.getName(), ex.getValue(),
+                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "expected type");
+        log.warn("Type mismatch on {}: {}", request.getRequestURI(), detail);
+        ApiErrorResponse error = ApiErrorResponse.builder()
+                .type("https://api.inventory-system.com/errors/bad-request")
+                .title("Invalid Parameter Type")
+                .status(HttpStatus.BAD_REQUEST.value())
+                .detail(detail)
+                .instance(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
         Map<String, String> fieldErrors = new HashMap<>();
